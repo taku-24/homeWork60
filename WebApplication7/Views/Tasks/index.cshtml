@@ -1,0 +1,123 @@
+@model IEnumerable<WebApplication7.Models.ToDoTask>
+@using System.Security.Claims
+
+<h2>Список задач</h2>
+
+<form method="get">
+    <input type="text" name="Title" placeholder="Поиск по названию" />
+    <input type="date" name="CreatedFrom" />
+    <input type="date" name="CreatedTo" />
+    <input type="text" name="Keywords" placeholder="Слова в описании" />
+
+    <select name="Priority">
+        <option value="">Все приоритеты</option>
+        <option value="Высокий">Высокий</option>
+        <option value="Средний">Средний</option>
+        <option value="Низкий">Низкий</option>
+    </select>
+
+    <select name="Status">
+        <option value="">Все статусы</option>
+        <option value="Новая">Новая</option>
+        <option value="Открыта">Открыта</option>
+        <option value="Закрыта">Закрыта</option>
+    </select>
+
+    <select name="SortOrder">
+        <option value="Title">Название</option>
+        <option value="Priority">Приоритет</option>
+        <option value="Status">Статус</option>
+        <option value="CreatedAt">Дата создания</option>
+    </select>
+
+    <label>
+        <input type="checkbox" name="Descending" value="true" /> По убыванию
+    </label>
+
+    <button type="submit">Фильтровать</button>
+</form>
+
+<table class="table">
+    <thead>
+    <tr>
+        <th>Номер</th>
+        <th>Название</th>
+        <th>Приоритет</th>
+        <th>Статус</th>
+        <th>Дата создания</th>
+        <th>Создатель</th>
+        <th>Исполнитель</th>
+        <th>Действия</th>
+    </tr>
+    </thead>
+    <tbody>
+
+    @{
+        string? currentUserId = null;
+        if (User.Identity?.IsAuthenticated == true)
+        {
+            currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        }
+    }
+
+    @foreach (var task in Model)
+    {
+        var priorityClass = task.Priority switch
+        {
+            WebApplication7.Models.Priority.Высокий => "text-danger",
+            WebApplication7.Models.Priority.Средний => "text-primary",
+            WebApplication7.Models.Priority.Низкий  => "text-success",
+            _ => ""
+        };
+
+        string? creatorId = task.CreatorId?.ToString();
+        string? executorId = task.ExecutorId?.ToString();
+
+        <tr>
+            <td>@task.Id</td>
+            <td>@task.Title</td>
+            <td class="@priorityClass">@task.Priority</td>
+            <td>@task.Status</td>
+            <td>@task.CreatedAt.ToString("dd.MM.yyyy HH:mm")</td>
+            <td>@(task.Creator?.Email ?? "-")</td>
+            <td>@(task.Executor?.Email ?? "не назначен")</td>
+
+            <td>
+                <a asp-action="Details" asp-route-id="@task.Id" class="btn btn-secondary">Детали</a>
+                
+                @if (User.Identity?.IsAuthenticated == true
+                     && task.Status == WebApplication7.Models.TaskStatus.Новая
+                     && task.ExecutorId == null
+                     && creatorId != currentUserId)
+                {
+                    <a asp-action="Take" asp-route-id="@task.Id" class="btn btn-primary">Взять</a>
+                }
+                
+                @if (User.Identity?.IsAuthenticated == true
+                     && task.Status == WebApplication7.Models.TaskStatus.Новая
+                     && executorId == currentUserId)
+                {
+                    <a asp-action="Open" asp-route-id="@task.Id" class="btn btn-secondary">Открыть</a>
+                }
+
+                @if (User.Identity?.IsAuthenticated == true
+                     && task.Status == WebApplication7.Models.TaskStatus.Открыта
+                     && executorId == currentUserId)
+                {
+                    <a asp-action="Close" asp-route-id="@task.Id" class="btn btn-secondary">Закрыть</a>
+                }
+                
+                @{
+                    var isCreatorOrAdmin = (creatorId == currentUserId) || User.IsInRole("admin");
+                }
+                @if (User.Identity?.IsAuthenticated == true && isCreatorOrAdmin)
+                {
+                    <a asp-action="Edit" asp-route-id="@task.Id" class="btn btn-warning">Редактировать</a>
+                    <a asp-action="Delete" asp-route-id="@task.Id" class="btn btn-danger"
+                       onclick="return confirm('Точно удалить задачу?');">Удалить</a>
+                }
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>
