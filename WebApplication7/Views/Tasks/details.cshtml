@@ -1,0 +1,109 @@
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Mvc.TagHelpers
+@model WebApplication7.Models.ToDoTask
+
+<div class="task-card">
+    <h3>Задача: @Model.Title</h3>
+
+    <div class="task-content">
+        <table class="task-table">
+            <tr>
+                <td>Статус:</td>
+                <td>@Model.Status</td>
+            </tr>
+            <tr>
+                <td>Приоритет:</td>
+                <td>
+                    @switch (Model.Priority)
+                    {
+                        case WebApplication7.Models.Priority.Высокий:
+                            <span class="priority-high">Высокий</span>
+                            break;
+
+                        case WebApplication7.Models.Priority.Средний:
+                            <span class="priority-medium">Средний</span>
+                            break;
+
+                        case WebApplication7.Models.Priority.Низкий:
+                            <span class="priority-low">Низкий</span>
+                            break;
+                    }
+                </td>
+            </tr>
+            <tr>
+                <td>Исполнитель:</td>
+                <td>@(Model.Executor?.Email ?? "не назначен")</td>
+            </tr>
+            <tr>
+                <td>Номер:</td>
+                <td>@Model.Id</td>
+            </tr>
+        </table>
+        
+        <div class="task-description">
+            <h4>Описание задачи</h4>
+            <p>@Model.Description</p>
+        </div>
+    </div>
+
+    <div class="task-dates">
+        <p><b>Дата создания:</b> @Model.CreatedAt</p>
+        @if (Model.OpenedAt != null)
+        {
+            <p><b>Дата открытия:</b> @Model.OpenedAt</p>
+        }
+        @if (Model.ClosedAt != null)
+        {
+            <p><b>Дата закрытия:</b> @Model.ClosedAt</p>
+        }
+    </div>
+    @Html.ValidationSummary(false, "", new { @class = "text-danger" })
+
+    @{
+        var currentUserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        string? creatorId = Model.CreatorId?.ToString();
+        string? executorId = Model.ExecutorId?.ToString();
+    }
+    <div class="task-actions">
+        @if (User.Identity?.IsAuthenticated == true
+             && Model.Status == WebApplication7.Models.TaskStatus.Новая
+             && executorId == currentUserId)
+        {
+            <a asp-action="Open" asp-route-id="@Model.Id" class="btn btn-primary">Открыть</a>
+        }
+        
+        @if (User.Identity?.IsAuthenticated == true
+             && Model.Status == WebApplication7.Models.TaskStatus.Новая
+             && Model.ExecutorId == null
+             && creatorId != currentUserId)
+        {
+            <a asp-action="Take" asp-route-id="@Model.Id" class="btn btn-success">Взять задачу</a>
+        }
+        
+        @if (User.Identity?.IsAuthenticated == true && creatorId == currentUserId && Model.ExecutorId == null)
+        {
+            <a asp-action="AcceptAsExecutor" asp-route-id="@Model.Id" class="btn btn-info">Принять как исполнитель</a>
+        }
+        
+        @{
+            var isCreatorOrAdmin = (creatorId == currentUserId) || User.IsInRole("admin");
+        }
+        @if (User.Identity?.IsAuthenticated == true && isCreatorOrAdmin)
+        {
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-warning">Редактировать</a>
+            <a asp-action="Delete" asp-route-id="@Model.Id" class="btn btn-danger"
+               onclick="return confirm('Точно удалить задачу?');">Удалить</a>
+        }
+        
+        @if (User.Identity?.IsAuthenticated == true
+             && Model.Status == WebApplication7.Models.TaskStatus.Открыта
+             && executorId == currentUserId)
+        {
+            <a asp-action="Close" asp-route-id="@Model.Id" class="btn btn-secondary">Закрыть</a>
+        }
+    </div>
+</div>
+
+@{
+    await Html.RenderPartialAsync("_ValidationScriptsPartial");
+}
