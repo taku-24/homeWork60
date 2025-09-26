@@ -1,0 +1,37 @@
+@model WebApplication7.Models.ToDoTask
+
+<h2>Новая задача</h2>
+
+<form asp-action="Create" method="post">
+    @Html.AntiForgeryToken()
+
+    <div class="form-group">
+        <label>Название задачи</label>
+        <input asp-for="Title" class="form-control" />
+        <span asp-validation-for="Title" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label>Приоритет</label>
+        <select asp-for="Priority" class="form-control" asp-items="Html.GetEnumSelectList<WebApplication7.Models.Priority>()"></select>
+        <span asp-validation-for="Priority" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label>Описание задачи</label>
+        <textarea asp-for="Description" class="form-control"></textarea>
+        <span asp-validation-for="Description" class="text-danger"></span>
+    </div>
+
+    <div class="form-group">
+        <label>Исполнитель</label>
+        <input type="text" class="form-control" disabled value="Назначается позже" />
+    </div>
+
+    <button type="submit" class="btn btn-success mt-2">Добавить</button>
+</form>
+
+@{
+    await Html.RenderPartialAsync("_ValidationScriptsPartial");
+}
+
